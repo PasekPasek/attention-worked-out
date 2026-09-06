@@ -2,7 +2,7 @@
 
 > An interactive, single-page explainer for the mechanism in "Attention Is All You Need"
 > (Vaswani et al., arXiv:1706.03762): scaled dot-product attention, multi-head attention, causal
-> masking and positional encoding. Six sandboxes, every number computed live in the browser from the
+> masking and positional encoding. An architecture map and eight sandboxes, every number computed live in the browser from the
 > paper's own formulas. Author: Paweł Pasek.
 
 Key points made on this page:

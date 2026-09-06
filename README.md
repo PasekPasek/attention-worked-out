@@ -7,10 +7,16 @@ A single-page, dependency-free interactive explainer for the mechanism behind
 
 ## What's in it
 
-- **Where all this sits.** The architecture from the paper's Figure 1, with the blocks this page opens
-  marked in amber and clickable straight to their section, and the ones it does not — residuals, layer
-  norm, feed-forward, the output head — in steel. The scope is visible before you start reading rather
-  than buried in a closing note.
+- **Where all this sits.** What the paper was doing in 2017, what a transformer is, and why the thing
+  is under every language model. A shape strip showing the one fact that makes it click — 6×512 goes
+  in, 6×512 comes out, twelve sub-layers in a row, and only attention lets one position see another.
+  Then the architecture from Figure 1, with the blocks this page opens in amber and clickable straight
+  to their section, the ones it does not in steel, and a toggle between the paper's translation model
+  and the decoder-only stack that came after it.
+- **Why the stack is six deep.** Composing the attention matrices across layers gives exactly how much
+  of each original token survives in a vector after L layers, so that is what it computes. Depth is not
+  what lets information arrive — full attention reaches everything at layer one — it is what lets it
+  compound.
 - **One head, hands on.** The n×n attention matrix over a short sentence. Click any row to see where
   that token looks. Four selectable heads, each a different affinity, because `qᵢ · kⱼ` is a bilinear
   form `xᵢ (W^Q W^Kᵀ) xⱼᵀ` — so a head *is* one matrix saying which kinds of token attend to which.
