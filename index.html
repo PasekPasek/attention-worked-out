@@ -325,6 +325,16 @@
   .archkey i.on{background:#241F17;border:1.5px solid var(--live)}
   .archkey i.off{background:var(--riser);border:1px solid var(--etch-lit)}
 
+  .pick{margin-top:18px;padding-top:16px;border-top:1px solid var(--etch)}
+  .pick h4{margin-bottom:8px}
+  .affrow{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:14px}
+  table.mat.aff td .c{width:34px;height:24px;font-size:10px;border-color:var(--well)}
+  table.mat.aff th{font-size:10.5px;padding:2px 6px}
+  .why{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-dim);
+    margin:10px 0 0;max-width:52ch;line-height:1.65}
+  .ctlnote{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--idle-ink);
+    margin:8px 0 0;max-width:66ch;line-height:1.6}
+
   .caveat{border-left:2px solid var(--warn);padding:2px 0 2px 14px;margin:20px 0;
     color:var(--ink-dim);font-size:15px;max-width:66ch}
 </style>
@@ -461,7 +471,16 @@
         <p class="hint" id="a-sum" aria-live="polite"></p>
       </div>
     </div>
-    <div class="controls" id="a-heads"></div>
+    <div class="pick">
+      <h4>Head &mdash; pick the affinity it carries</h4>
+      <div class="controls" id="a-heads"></div>
+      <div class="affrow">
+        <div>
+          <div class="matwrap"><table class="mat aff" id="a-aff"></table></div>
+        </div>
+        <p class="why" id="a-why"></p>
+      </div>
+    </div>
     <ul class="log" id="a-log" aria-live="polite"></ul>
   </div>
 
@@ -487,6 +506,7 @@
       <output id="b-dkv">4</output>
       <button class="ghost mini" id="b-resample">resample</button>
     </div>
+    <p class="ctlnote">d<sub>k</sub> is how wide one head is &mdash; the paper's is 64. Drag it and the page draws fresh random q and k of that width and takes real dot products; <em>resample</em> draws a new set at the same width.</p>
     <p class="hint" id="b-stat" aria-live="polite"></p>
     <div class="split" style="margin-top:6px">
       <div>
@@ -523,6 +543,7 @@
       <output id="c-hv">3</output>
       <span id="c-budget" class="mono"></span>
     </div>
+    <p class="ctlnote">How many attentions run in parallel. Each gets a different affinity and a projection of width d<sub>model</sub>/h, so more heads means narrower ones, not more work.</p>
     <div class="heads" id="c-heads"></div>
     <ul class="log" id="c-log" aria-live="polite"></ul>
   </div>
@@ -544,6 +565,7 @@
     <div class="controls">
       <button id="d-toggle">Apply the causal mask</button>
     </div>
+    <p class="ctlnote">Sets every score above the diagonal to &minus;&infin; before the softmax, so no token can attend to one that comes after it.</p>
     <div class="split" style="margin-top:14px">
       <div>
         <h4 id="d-title">Attention weights</h4>
@@ -574,6 +596,7 @@
       <button id="e-pe" class="ghost">Add positional encoding</button>
       <button id="e-reset" class="ghost">reset</button>
     </div>
+    <p class="ctlnote"><em>Shuffle</em> reorders the tokens and recomputes. <em>Add positional encoding</em> adds the sinusoid for each slot to the token's vector, so the same word in a different place is no longer the same input.</p>
     <div class="tokrow" id="e-toks" style="margin-top:14px"></div>
     <div class="split">
       <div>
@@ -606,6 +629,7 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
       <input type="range" id="f-pos" min="0" max="47" step="1" value="8">
       <output id="f-posv">8</output>
     </div>
+    <p class="ctlnote">Below: the dot product between the encoding of the position you picked and the encodings three slots either side of it &mdash; how alike two positions look to the model.</p>
     <div class="bars" id="f-sim"></div>
     <p class="hint" id="f-note" aria-live="polite"></p>
   </div>
@@ -630,6 +654,7 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
       <input type="range" id="g-d" min="64" max="1024" step="64" value="512">
       <output id="g-dv">512</output>
     </div>
+    <p class="ctlnote">n is how many tokens are in the sequence, d how wide each token's vector is. Both sliders recompute the table below with those numbers put into the paper's formulas.</p>
     <div class="matwrap">
       <table class="spec" id="g-table">
         <thead><tr><th>Layer type</th><th>Complexity per layer</th><th>Sequential ops</th><th>Max path length</th></tr></thead>
@@ -812,7 +837,35 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
 
   /* ============ 01 · one head ============ */
   var aHead = 0, aRow = 2, ORDER = TOKENS.map(function(_, i){ return i; });
+  function affinity(){
+    var A = HEADS[aHead].A, node = el('a-aff');
+    node.innerHTML = '';
+    var hd = document.createElement('tr');
+    var corner = document.createElement('th'); corner.textContent = 'q \\ k'; hd.appendChild(corner);
+    FEATS.forEach(function(f){
+      var th = document.createElement('th'); th.textContent = f; hd.appendChild(th);
+    });
+    node.appendChild(hd);
+    A.forEach(function(row, i){
+      var tr = document.createElement('tr');
+      var th = document.createElement('th'); th.className = 'rh'; th.textContent = FEATS[i];
+      tr.appendChild(th);
+      row.forEach(function(v){
+        var td = document.createElement('td'), c = document.createElement('div');
+        c.className = 'c';
+        c.style.background = heat(v / 3);
+        c.style.color = v / 3 > 0.42 ? 'var(--plate)' : 'var(--ink-dim)';
+        c.textContent = v;
+        td.appendChild(c); tr.appendChild(td);
+      });
+      node.appendChild(tr);
+    });
+    el('a-why').textContent =
+      'Row is the kind of token doing the looking, column the kind being looked at. ' +
+      'A bigger number is a stronger pull. This head: ' + HEADS[aHead].note + '.';
+  }
   function aRender(){
+    affinity();
     var W = attend(HEADS[aHead].A, ORDER, false, false);
     grid(el('a-grid'), W, ORDER, function(i){ aRow = i; aRender(); }, aRow, false);
     var labs = ORDER.map(function(oi){ return TOKENS[oi].w; });
