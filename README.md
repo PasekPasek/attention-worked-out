@@ -7,6 +7,10 @@ A single-page, dependency-free interactive explainer for the mechanism behind
 
 ## What's in it
 
+- **Where all this sits.** The architecture from the paper's Figure 1, with the blocks this page opens
+  marked in amber and clickable straight to their section, and the ones it does not — residuals, layer
+  norm, feed-forward, the output head — in steel. The scope is visible before you start reading rather
+  than buried in a closing note.
 - **One head, hands on.** The n×n attention matrix over a short sentence. Click any row to see where
   that token looks. Four selectable heads, each a different affinity, because `qᵢ · kⱼ` is a bilinear
   form `xᵢ (W^Q W^Kᵀ) xⱼᵀ` — so a head *is* one matrix saying which kinds of token attend to which.

@@ -9,6 +9,26 @@ Attention is a weighted average where the weights are computed from the data its
 in the paper — the scaling, the heads, the mask, the sinusoids — is a consequence of that one
 sentence.
 
+## 0. Where all this sits
+
+Attention is one sub-layer inside a larger model, and reading about it without that frame is most of
+what makes it hard.
+
+Both stacks are six identical layers deep. An encoder layer has two sub-layers: multi-head
+self-attention, then a position-wise fully connected feed-forward network. A decoder layer has three:
+masked multi-head self-attention, then multi-head attention over the output of the encoder stack —
+queries from the decoder, keys and values from the encoder — then feed-forward. Every sub-layer is
+wrapped as LayerNorm(x + Sublayer(x)), a residual connection followed by layer normalisation, which
+is what makes a stack this deep trainable at all.
+
+Below the stacks sit the embeddings, summed with the positional encoding; the decoder's output
+embeddings are shifted right by one position. Above the decoder sit a learned linear transformation
+and a softmax producing next-token probabilities.
+
+Of that machine, this page opens the attention sub-layers and the positional encoding. The residual
+connections, layer normalisation, feed-forward networks, embeddings and output head are real and
+load-bearing, and out of scope here.
+
 ## 1. One head
 
 In a self-attention layer — the case this page works through — every token produces three vectors,

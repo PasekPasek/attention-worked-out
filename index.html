@@ -293,6 +293,29 @@
   table.spec tr.hot td{color:var(--live)}
   table.spec td.num{color:var(--ink)}
 
+  /* ---- the architecture map ---- */
+  .archwrap{overflow-x:auto}
+  .arch{display:block;width:100%;min-width:560px;height:auto}
+  .arch text{font-family:"IBM Plex Mono",monospace;font-size:10px;fill:var(--ink-dim)}
+  .arch .ttl{font-size:11.5px;fill:var(--ink)}
+  .arch .ab rect{fill:var(--riser);stroke:var(--etch-lit);stroke-width:1}
+  .arch .ab text{fill:var(--idle-ink)}
+  .arch .ab.on rect{fill:#241F17;stroke:var(--live);stroke-width:1.5}
+  .arch .ab.on text{fill:var(--live)}
+  .arch .ab.on{cursor:pointer}
+  .arch .ab.on:hover rect{fill:#2E2519}
+  .arch .ab.on:focus{outline:none}
+  .arch .ab.on:focus rect{stroke-width:2.5}
+  .arch .grp{fill:none;stroke:var(--etch);stroke-width:1;stroke-dasharray:4 3}
+  .arch .flow{stroke:var(--idle-line);fill:none;stroke-width:1.2;marker-end:url(#af)}
+  .arch .flow.cross{stroke:var(--stored);stroke-width:1.4;marker-end:url(#afc)}
+  .archkey{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-dim)}
+  .archkey span{display:flex;align-items:center;gap:7px}
+  .archkey i{width:11px;height:11px;border-radius:2px;display:inline-block}
+  .archkey i.on{background:#241F17;border:1.5px solid var(--live)}
+  .archkey i.off{background:var(--riser);border:1px solid var(--etch-lit)}
+
   .caveat{border-left:2px solid var(--warn);padding:2px 0 2px 14px;margin:20px 0;
     color:var(--ink-dim);font-size:15px;max-width:66ch}
 </style>
@@ -304,23 +327,92 @@
   <p class="kicker">A walkthrough of arXiv:1706.03762 (Vaswani et al., 2017)</p>
   <h1>Attention, worked out</h1>
   <p class="lead">Attention is a weighted average where the weights are computed from the data itself. Everything else in the paper — the scaling, the heads, the mask, the sinusoids — is a consequence of that one sentence, and this page lets you operate each piece.</p>
-  <p class="muted">Six sandboxes. Every number on this page is computed in your browser from the paper's own formulas: real softmax, real dot products, real sinusoids, real sampling.</p>
+  <p class="muted">An architecture map and six sandboxes. Every number on this page is computed in your browser from the paper's own formulas: real softmax, real dot products, real sinusoids, real sampling.</p>
   <div class="bench">
   <ul class="toc">
-    <li><a href="#head">01 &nbsp; One head, hands on</a></li>
-    <li><a href="#scale">02 &nbsp; Why divide by &radic;d<sub>k</sub></a></li>
-    <li><a href="#multi">03 &nbsp; Many heads, one budget</a></li>
-    <li><a href="#mask">04 &nbsp; The mask</a></li>
-    <li><a href="#position">05 &nbsp; Attention cannot see order</a></li>
-    <li><a href="#why">06 &nbsp; What this buys</a></li>
+    <li><a href="#arch">01 &nbsp; Where all this sits</a></li>
+    <li><a href="#head">02 &nbsp; One head, hands on</a></li>
+    <li><a href="#scale">03 &nbsp; Why divide by &radic;d<sub>k</sub></a></li>
+    <li><a href="#multi">04 &nbsp; Many heads, one budget</a></li>
+    <li><a href="#mask">05 &nbsp; The mask</a></li>
+    <li><a href="#position">06 &nbsp; Attention cannot see order</a></li>
+    <li><a href="#why">07 &nbsp; What this buys</a></li>
   </ul>
   </div>
 </header>
 
 <main>
 
-<section id="head">
+<section id="arch">
   <div class="sec-head"><span class="sec-num">01</span>
+    <div><h2>Where all this sits</h2>
+      <p class="muted" style="margin:6px 0 0">The machine first, then the box we open.</p></div>
+  </div>
+
+  <p>Attention is one sub-layer inside a larger model, and reading about it without that frame is most of what makes it hard. So here is the whole architecture from the paper's Figure 1, with the parts this page takes apart marked. <strong>Click any amber block to jump to the section that opens it.</strong></p>
+
+  <div class="demo">
+    <div class="archwrap">
+    <svg class="arch" viewBox="0 0 620 480" role="img" aria-label="The Transformer architecture: an encoder stack on the left and a decoder stack on the right, each repeated six times, with the blocks this page explains highlighted.">
+      <defs>
+        <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3A4552"/></marker>
+        <marker id="afc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7FA7C4"/></marker>
+      </defs>
+
+      <text class="ttl" x="157" y="20" text-anchor="middle">Encoder</text>
+      <text class="ttl" x="451" y="20" text-anchor="middle">Decoder</text>
+      <rect class="grp" x="50" y="204" width="214" height="140" rx="4"/>
+      <rect class="grp" x="344" y="128" width="214" height="216" rx="4"/>
+      <text x="46" y="200" text-anchor="end">N &times; 6</text>
+      <text x="340" y="124" text-anchor="end">N &times; 6</text>
+      <a class="ab on" href="#head"><rect x="62" y="330" width="190" height="30" rx="3"/><text x="157.0" y="349" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
+      <g class="ab"><rect x="62" y="292" width="190" height="30" rx="3"/><text x="157.0" y="311" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <g class="ab"><rect x="62" y="254" width="190" height="30" rx="3"/><text x="157.0" y="273" text-anchor="middle" font-size="10">Feed Forward</text></g>
+      <g class="ab"><rect x="62" y="216" width="190" height="30" rx="3"/><text x="157.0" y="235" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <a class="ab on" href="#mask"><rect x="356" y="330" width="190" height="30" rx="3"/><text x="451.0" y="349" text-anchor="middle" font-size="10">Masked Multi-Head Attention</text></a>
+      <g class="ab"><rect x="356" y="292" width="190" height="30" rx="3"/><text x="451.0" y="311" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <a class="ab on" href="#multi"><rect x="356" y="254" width="190" height="30" rx="3"/><text x="451.0" y="273" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
+      <g class="ab"><rect x="356" y="216" width="190" height="30" rx="3"/><text x="451.0" y="235" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <g class="ab"><rect x="356" y="178" width="190" height="30" rx="3"/><text x="451.0" y="197" text-anchor="middle" font-size="10">Feed Forward</text></g>
+      <g class="ab"><rect x="356" y="140" width="190" height="30" rx="3"/><text x="451.0" y="159" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <a class="ab on" href="#position"><rect x="62" y="382" width="190" height="30" rx="3"/><text x="157.0" y="401" text-anchor="middle" font-size="10">&oplus; Positional Encoding</text></a>
+      <a class="ab on" href="#position"><rect x="356" y="382" width="190" height="30" rx="3"/><text x="451.0" y="401" text-anchor="middle" font-size="10">&oplus; Positional Encoding</text></a>
+      <g class="ab"><rect x="62" y="424" width="190" height="30" rx="3"/><text x="157.0" y="443" text-anchor="middle" font-size="10">Input Embedding</text></g>
+      <g class="ab"><rect x="356" y="424" width="190" height="30" rx="3"/><text x="451.0" y="443" text-anchor="middle" font-size="10">Output Embedding</text></g>
+      <text x="451" y="466" text-anchor="middle" font-size="9">shifted right by one position</text>
+      <g class="ab"><rect x="356" y="64" width="190" height="30" rx="3"/><text x="451.0" y="83" text-anchor="middle" font-size="10">Linear</text></g>
+      <g class="ab"><rect x="356" y="26" width="190" height="30" rx="3"/><text x="451.0" y="45" text-anchor="middle" font-size="10">Softmax &rarr; probabilities</text></g>
+      <path class="flow" d="M157.0,424 L157.0,414"/>
+      <path class="flow" d="M157.0,382 L157.0,362"/>
+      <path class="flow" d="M157.0,330 L157.0,324"/>
+      <path class="flow" d="M157.0,292 L157.0,286"/>
+      <path class="flow" d="M157.0,254 L157.0,248"/>
+      <path class="flow" d="M451.0,424 L451.0,414"/>
+      <path class="flow" d="M451.0,382 L451.0,362"/>
+      <path class="flow" d="M451.0,330 L451.0,324"/>
+      <path class="flow" d="M451.0,292 L451.0,286"/>
+      <path class="flow" d="M451.0,254 L451.0,248"/>
+      <path class="flow" d="M451.0,216 L451.0,210"/>
+      <path class="flow" d="M451.0,178 L451.0,172"/>
+      <path class="flow" d="M451.0,140 L451.0,96"/>
+      <path class="flow" d="M451.0,64 L451.0,58"/>
+      <path class="flow cross" d="M252,216 C300,206 306,250 352,262"/>
+      <text x="302" y="232" text-anchor="middle" fill="#7FA7C4">K, V</text>
+    </svg>
+    </div>
+    <div class="archkey">
+      <span><i class="on"></i> opened on this page</span>
+      <span><i class="off"></i> in the paper, out of scope here</span>
+    </div>
+  </div>
+
+  <p>Both stacks are six identical layers deep. An encoder layer is two sub-layers — multi-head self-attention, then a position-wise feed-forward network. A decoder layer is three: masked self-attention, then attention over the encoder's output, then feed-forward. Every one of those sub-layers is wrapped as <code>LayerNorm(x + Sublayer(x))</code>, a residual connection followed by layer normalisation, which is what makes a stack this deep trainable at all.</p>
+
+  <p>The steel blocks are real and load-bearing; they are simply not what the paper is named after. What follows opens the amber ones, starting with a single attention head.</p>
+</section>
+
+<section id="head">
+  <div class="sec-head"><span class="sec-num">02</span>
     <div><h2>One head, hands on</h2>
       <p class="muted" style="margin:6px 0 0">A weighted average whose weights the data chooses.</p></div>
   </div>
@@ -354,7 +446,7 @@
 </section>
 
 <section id="scale">
-  <div class="sec-head"><span class="sec-num">02</span>
+  <div class="sec-head"><span class="sec-num">03</span>
     <div><h2>Why divide by &radic;d<sub>k</sub></h2>
       <p class="muted" style="margin:6px 0 0">The one line in the paper that is a statistical argument, not a design choice.</p></div>
   </div>
@@ -389,7 +481,7 @@
 </section>
 
 <section id="multi">
-  <div class="sec-head"><span class="sec-num">03</span>
+  <div class="sec-head"><span class="sec-num">04</span>
     <div><h2>Many heads, one budget</h2>
       <p class="muted" style="margin:6px 0 0">Not more attention. The same attention, cut into subspaces.</p></div>
   </div>
@@ -416,7 +508,7 @@
 </section>
 
 <section id="mask">
-  <div class="sec-head"><span class="sec-num">04</span>
+  <div class="sec-head"><span class="sec-num">05</span>
     <div><h2>The mask</h2>
       <p class="muted" style="margin:6px 0 0">How a decoder is stopped from reading ahead.</p></div>
   </div>
@@ -446,7 +538,7 @@
 </section>
 
 <section id="position">
-  <div class="sec-head"><span class="sec-num">05</span>
+  <div class="sec-head"><span class="sec-num">06</span>
     <div><h2>Attention cannot see order</h2>
       <p class="muted" style="margin:6px 0 0">The problem positional encoding exists to solve.</p></div>
   </div>
@@ -497,7 +589,7 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
 </section>
 
 <section id="why">
-  <div class="sec-head"><span class="sec-num">06</span>
+  <div class="sec-head"><span class="sec-num">07</span>
     <div><h2>What this buys</h2>
       <p class="muted" style="margin:6px 0 0">Table 1 of the paper, with your own numbers in it.</p></div>
   </div>
