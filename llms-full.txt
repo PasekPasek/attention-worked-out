@@ -11,7 +11,8 @@ sentence.
 
 ## 1. One head
 
-Every token produces three vectors, all three from the same input through three learned projections:
+In a self-attention layer — the case this page works through — every token produces three vectors,
+all three from the same input through three learned projections:
 a query (what am I looking for), a key (what do I offer) and a value (what do I pass on if chosen).
 Token i scores every token j by q_i · k_j, softmaxes those scores into weights that sum to one, and
 takes that weighted average of the values.
@@ -27,12 +28,16 @@ rather than a sum, and it is guaranteed by the softmax rather than enforced afte
 
 ## 2. Why divide by √d_k
 
-The paper's footnote: if the components of q and k are independent random variables with mean 0 and
-variance 1, then their dot product q · k = Σ q_i k_i has mean 0 and variance d_k.
+The paper keeps two claims apart. Observed: additive attention beats unscaled dot-product attention
+at larger d_k. Suspected, in the paper's own hedge: "we suspect that for large values of d_k, the dot
+products grow large in magnitude, pushing the softmax function into regions where it has extremely
+small gradients."
 
-Scores therefore spread out as the head gets wider, and the softmax of a wide spread is a spike. A
-spike has almost no gradient anywhere, so the layer stops learning. Dividing by √d_k returns the
-variance to 1 at any width. At the paper's actual head width of 64, the unscaled softmax already puts
+The arithmetic underneath is neither observed nor suspected but simply true, and the paper puts it in
+a footnote: if the components of q and k are independent random variables with mean 0 and variance 1,
+then their dot product q · k = Σ q_i k_i has mean 0 and variance d_k. Scores spread out as the head
+gets wider, and the softmax of a wide spread is a spike. Dividing by √d_k returns the variance to 1 at
+any width. At the paper's actual head width of 64, the unscaled softmax already puts
 essentially all of its mass on a single key.
 
 ## 3. Multi-head
@@ -83,6 +88,10 @@ the slot, never to the word.
     Recurrent                   O(n · d²)              O(n)             O(n)
     Convolutional               O(k · n · d²)          O(1)             O(log_k n)
     Self-attention (restricted) O(r · n · d)           O(1)             O(n/r)
+
+The restricted row is a proposal, not a result: the paper offers it for very long sequences, notes it
+raises maximum path length to O(n/r), and says the authors planned to investigate it in future work.
+The model they train attends over everything.
 
 The argument for replacing recurrence is not that attention is cheaper. Self-attention is the cheaper
 layer only while n < d, which the paper notes is the common case for sentence-length sequences in

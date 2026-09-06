@@ -325,7 +325,9 @@
       <p class="muted" style="margin:6px 0 0">A weighted average whose weights the data chooses.</p></div>
   </div>
 
-  <p>Every token produces three vectors, all three from the <em>same</em> input, through three learned projections: a <strong>query</strong> (what am I looking for), a <strong>key</strong> (what do I offer) and a <strong>value</strong> (what do I pass on if chosen). Token <em>i</em> scores every token <em>j</em> by <code>q<sub>i</sub> &middot; k<sub>j</sub></code>, softmaxes those scores into weights that sum to one, and takes that weighted average of the values.</p>
+  <p>In a <strong>self-attention</strong> layer &mdash; the case this page works through &mdash; every token produces three vectors, all three from the <em>same</em> input, through three learned projections: a <strong>query</strong> (what am I looking for), a <strong>key</strong> (what do I offer) and a <strong>value</strong> (what do I pass on if chosen). Token <em>i</em> scores every token <em>j</em> by <code>q<sub>i</sub> &middot; k<sub>j</sub></code>, softmaxes those scores into weights that sum to one, and takes that weighted average of the values.</p>
+
+  <p>"From the same input" is what makes it <em>self</em>-attention, and the paper is careful that this is not the only arrangement. Its decoder also carries an encoder&ndash;decoder layer where the queries come from the previous decoder layer while the keys and values come from the encoder's output &mdash; the same arithmetic below, with the three projections reading two different places.</p>
 
   <pre>Attention(Q, K, V) = softmax( Q K<sup>T</sup> / &radic;d<sub>k</sub> ) V</pre>
 
@@ -357,7 +359,9 @@
       <p class="muted" style="margin:6px 0 0">The one line in the paper that is a statistical argument, not a design choice.</p></div>
   </div>
 
-  <p>The paper's footnote states it plainly: if the components of <code>q</code> and <code>k</code> are independent with mean 0 and variance 1, then <code>q &middot; k</code> has mean 0 and <strong>variance d<sub>k</sub></strong>. Scores therefore spread out as the head gets wider — and softmax of a wide spread is a spike. A spike has almost no gradient anywhere, so the layer stops learning.</p>
+  <p>Two claims here, and the paper keeps them apart, so this page should too. What was <em>observed</em>: additive attention beats unscaled dot-product attention at larger <code>d<sub>k</sub></code>. What is <em>suspected</em> — the paper's own word — is the reason: &ldquo;we suspect that for large values of <code>d<sub>k</sub></code>, the dot products grow large in magnitude, pushing the softmax function into regions where it has extremely small gradients.&rdquo;</p>
+
+  <p>What is neither observed nor suspected but simply true is the arithmetic underneath, which the paper puts in a footnote: if the components of <code>q</code> and <code>k</code> are independent with mean 0 and variance 1, then <code>q &middot; k</code> has mean 0 and <strong>variance d<sub>k</sub></strong>. Scores spread out as the head gets wider, and the softmax of a wide spread is a spike. That part you can measure, and the sandbox below does.</p>
 
   <p>Nothing below is simulated. Drag <code>d<sub>k</sub></code> and the page samples fresh Gaussian vectors, takes real dot products, and softmaxes them both ways.</p>
 
@@ -521,6 +525,8 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
   </div>
 
   <p>Slide <em>n</em> and the crossover moves. Self-attention is <code>O(n<sup>2</sup>&middot;d)</code> against recurrence's <code>O(n&middot;d<sup>2</sup>)</code>, so attention is the cheaper layer exactly while <code>n &lt; d</code> — which, as the paper notes, is the common case for sentence-length sequences in translation. Beyond that it costs more per layer and keeps winning anyway, because the columns that matter for learning are the other two: constant sequential work, and a constant path between any two positions.</p>
+
+  <p>One row of that table is a proposal rather than a result. Restricting self-attention to a neighbourhood of size <code>r</code> is offered for very long sequences, with the note that it raises the maximum path length to <code>O(n/r)</code> and that the authors planned to investigate it in future work &mdash; the model the paper actually trains attends over everything.</p>
 
   <h3>What this page leaves out</h3>
   <p>The mechanism, not the model. A full encoder&ndash;decoder stacks <code>N = 6</code> of these layers on each side, and every layer wraps its attention and its position-wise feed-forward network in a residual connection and layer normalisation — <code>LayerNorm(x + Sublayer(x))</code> — which is what makes a stack that deep trainable at all. The decoder adds a second attention per layer, over the encoder's output rather than its own. And the whole training recipe is elsewhere: the warmup schedule, label smoothing, the beam search. Those are in the paper; this page is about the part that gave it its title.</p>
