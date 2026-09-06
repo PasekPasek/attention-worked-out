@@ -325,6 +325,27 @@
   .archkey i.on{background:#241F17;border:1.5px solid var(--live)}
   .archkey i.off{background:var(--riser);border:1px solid var(--etch-lit)}
 
+  /* what flows through the stack */
+  .flow-strip{margin:4px 0 0}
+  .stage{display:flex;align-items:center;gap:14px;padding:7px 0}
+  .stage .lbl{flex:1;font-family:"IBM Plex Serif",Georgia,serif;font-size:14px;color:var(--ink)}
+  .stage .shape{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--live);
+    background:#241F17;border:1px solid rgba(240,169,76,.4);border-radius:var(--r);
+    padding:3px 10px;white-space:nowrap;flex:none}
+  .stage .shape.dim{color:var(--idle-ink);background:var(--well);border-color:var(--etch)}
+  .stage.rep{border-left:2px solid var(--etch-lit);padding-left:14px;margin-left:2px}
+  .arrowr{height:14px;border-left:1px dashed var(--etch-lit);margin-left:2px}
+  .mixnote{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--stored);
+    margin-left:16px;flex:none}
+
+  /* the architecture toggle */
+  .arch.lm .enc-side{opacity:.22}
+  .arch.lm .xattn{opacity:.14}
+  .arch.lm .dec-cross rect{stroke:var(--etch-lit);fill:var(--riser)}
+  .arch.lm .dec-cross text{fill:var(--idle-ink)}
+  .arch .enc-side, .arch .xattn{transition:opacity .35s ease}
+  .arch .dec-cross rect, .arch .dec-cross text{transition:stroke .35s ease,fill .35s ease}
+
   .pick{margin-top:18px;padding-top:16px;border-top:1px solid var(--etch)}
   .pick h4{margin-bottom:8px}
   .affrow{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:14px}
@@ -372,6 +393,28 @@
 
   <p>A <strong>transformer</strong> is what you get from that. Text is cut into tokens and each token becomes a vector. A stack of identical layers then takes that sequence of vectors and returns a sequence of vectors of the same shape, over and over, and the only step in a layer that moves information <em>between</em> positions is attention — everything else works on each position on its own. Words go in knowing nothing about their neighbours and come out having read them.</p>
 
+  <p>Before the diagram, the thing that makes all of it click: <strong>the shape never changes.</strong> Every layer takes a sequence of vectors and hands back a sequence of the same size, so a stack is just that operation applied again and again. Sizes below are the paper's base model.</p>
+
+  <div class="demo">
+    <div class="flow-strip">
+      <div class="stage"><span class="lbl">&ldquo;the cat sat on the mat&rdquo;</span><span class="shape dim">text</span></div>
+      <div class="arrowr"></div>
+      <div class="stage"><span class="lbl">cut into tokens</span><span class="shape dim">6 tokens</span></div>
+      <div class="arrowr"></div>
+      <div class="stage"><span class="lbl">each token becomes a vector, plus its position</span><span class="shape">6 &times; 512</span></div>
+      <div class="arrowr"></div>
+      <div class="stage rep"><span class="lbl">attention &mdash; every position reads every other</span><span class="mixnote">mixes rows</span><span class="shape">6 &times; 512</span></div>
+      <div class="stage rep"><span class="lbl">feed-forward &mdash; each position on its own</span><span class="mixnote">row by row</span><span class="shape">6 &times; 512</span></div>
+      <div class="stage rep"><span class="lbl">&hellip; and again, six times over</span><span class="shape">6 &times; 512</span></div>
+      <div class="arrowr"></div>
+      <div class="stage"><span class="lbl">linear, then softmax over the vocabulary</span><span class="shape dim">6 &times; 37000</span></div>
+      <div class="arrowr"></div>
+      <div class="stage"><span class="lbl">when generating, only the last row is read</span><span class="shape dim">1 &times; 37000</span></div>
+    </div>
+  </div>
+
+  <p>That is the whole shape of it. Six by 512 goes in, six by 512 comes out, twelve times in a row, and the only step in that column that lets one position see another is attention. Everything else &mdash; the feed-forward network, the normalisation &mdash; works on each row separately and would give the same answer if you shuffled the sentence.</p>
+
   <p>Attention is therefore one sub-layer inside a larger machine, and reading about it without that frame is most of what makes it hard. Here is the whole architecture from the paper's Figure 1, with the parts this page takes apart marked. <strong>Click any amber block to jump to the section that opens it.</strong></p>
 
   <div class="demo">
@@ -382,34 +425,34 @@
         <marker id="afc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7FA7C4"/></marker>
       </defs>
 
-      <text class="ttl" x="157" y="20" text-anchor="middle">Encoder</text>
+      <text class="ttl enc-side" x="157" y="20" text-anchor="middle">Encoder</text>
       <text class="ttl" x="451" y="20" text-anchor="middle">Decoder</text>
-      <rect class="grp" x="50" y="204" width="214" height="140" rx="4"/>
+      <rect class="grp enc-side" x="50" y="204" width="214" height="140" rx="4"/>
       <rect class="grp" x="344" y="128" width="214" height="216" rx="4"/>
-      <text x="46" y="200" text-anchor="end">N &times; 6</text>
+      <text class="enc-side" x="46" y="200" text-anchor="end">N &times; 6</text>
       <text x="340" y="124" text-anchor="end">N &times; 6</text>
-      <a class="ab on" href="#head"><rect x="62" y="330" width="190" height="30" rx="3"/><text x="157.0" y="349" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
-      <g class="ab"><rect x="62" y="292" width="190" height="30" rx="3"/><text x="157.0" y="311" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
-      <g class="ab"><rect x="62" y="254" width="190" height="30" rx="3"/><text x="157.0" y="273" text-anchor="middle" font-size="10">Feed Forward</text></g>
-      <g class="ab"><rect x="62" y="216" width="190" height="30" rx="3"/><text x="157.0" y="235" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <a class="ab on enc-side" href="#head"><rect x="62" y="330" width="190" height="30" rx="3"/><text x="157.0" y="349" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
+      <g class="ab enc-side"><rect x="62" y="292" width="190" height="30" rx="3"/><text x="157.0" y="311" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
+      <g class="ab enc-side"><rect x="62" y="254" width="190" height="30" rx="3"/><text x="157.0" y="273" text-anchor="middle" font-size="10">Feed Forward</text></g>
+      <g class="ab enc-side"><rect x="62" y="216" width="190" height="30" rx="3"/><text x="157.0" y="235" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
       <a class="ab on" href="#mask"><rect x="356" y="330" width="190" height="30" rx="3"/><text x="451.0" y="349" text-anchor="middle" font-size="10">Masked Multi-Head Attention</text></a>
       <g class="ab"><rect x="356" y="292" width="190" height="30" rx="3"/><text x="451.0" y="311" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
-      <a class="ab on" href="#multi"><rect x="356" y="254" width="190" height="30" rx="3"/><text x="451.0" y="273" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
+      <a class="ab on dec-cross" href="#multi"><rect x="356" y="254" width="190" height="30" rx="3"/><text x="451.0" y="273" text-anchor="middle" font-size="10">Multi-Head Attention</text></a>
       <g class="ab"><rect x="356" y="216" width="190" height="30" rx="3"/><text x="451.0" y="235" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
       <g class="ab"><rect x="356" y="178" width="190" height="30" rx="3"/><text x="451.0" y="197" text-anchor="middle" font-size="10">Feed Forward</text></g>
       <g class="ab"><rect x="356" y="140" width="190" height="30" rx="3"/><text x="451.0" y="159" text-anchor="middle" font-size="10">Add &amp; Norm</text></g>
-      <a class="ab on" href="#position"><rect x="62" y="382" width="190" height="30" rx="3"/><text x="157.0" y="401" text-anchor="middle" font-size="10">&oplus; Positional Encoding</text></a>
+      <a class="ab on enc-side" href="#position"><rect x="62" y="382" width="190" height="30" rx="3"/><text x="157.0" y="401" text-anchor="middle" font-size="10">&oplus; Positional Encoding</text></a>
       <a class="ab on" href="#position"><rect x="356" y="382" width="190" height="30" rx="3"/><text x="451.0" y="401" text-anchor="middle" font-size="10">&oplus; Positional Encoding</text></a>
-      <g class="ab"><rect x="62" y="424" width="190" height="30" rx="3"/><text x="157.0" y="443" text-anchor="middle" font-size="10">Input Embedding</text></g>
+      <g class="ab enc-side"><rect x="62" y="424" width="190" height="30" rx="3"/><text x="157.0" y="443" text-anchor="middle" font-size="10">Input Embedding</text></g>
       <g class="ab"><rect x="356" y="424" width="190" height="30" rx="3"/><text x="451.0" y="443" text-anchor="middle" font-size="10">Output Embedding</text></g>
       <text x="451" y="466" text-anchor="middle" font-size="9">shifted right by one position</text>
       <g class="ab"><rect x="356" y="64" width="190" height="30" rx="3"/><text x="451.0" y="83" text-anchor="middle" font-size="10">Linear</text></g>
       <g class="ab"><rect x="356" y="26" width="190" height="30" rx="3"/><text x="451.0" y="45" text-anchor="middle" font-size="10">Softmax &rarr; probabilities</text></g>
-      <path class="flow" d="M157.0,424 L157.0,414"/>
-      <path class="flow" d="M157.0,382 L157.0,362"/>
-      <path class="flow" d="M157.0,330 L157.0,324"/>
-      <path class="flow" d="M157.0,292 L157.0,286"/>
-      <path class="flow" d="M157.0,254 L157.0,248"/>
+      <path class="flow enc-side" d="M157.0,424 L157.0,414"/>
+      <path class="flow enc-side" d="M157.0,382 L157.0,362"/>
+      <path class="flow enc-side" d="M157.0,330 L157.0,324"/>
+      <path class="flow enc-side" d="M157.0,292 L157.0,286"/>
+      <path class="flow enc-side" d="M157.0,254 L157.0,248"/>
       <path class="flow" d="M451.0,424 L451.0,414"/>
       <path class="flow" d="M451.0,382 L451.0,362"/>
       <path class="flow" d="M451.0,330 L451.0,324"/>
@@ -419,10 +462,15 @@
       <path class="flow" d="M451.0,178 L451.0,172"/>
       <path class="flow" d="M451.0,140 L451.0,96"/>
       <path class="flow" d="M451.0,64 L451.0,58"/>
-      <path class="flow cross" d="M252,216 C300,206 306,250 352,262"/>
-      <text x="302" y="232" text-anchor="middle" fill="#7FA7C4">K, V</text>
+      <path class="flow cross xattn" d="M252,216 C300,206 306,250 352,262"/>
+      <text class="xattn" x="302" y="232" text-anchor="middle" fill="#7FA7C4">K, V</text>
     </svg>
     </div>
+    <div class="controls" style="margin-bottom:16px">
+      <button id="arch-mt">Translation &mdash; the paper</button>
+      <button id="arch-lm" class="ghost">Language model &mdash; what came after</button>
+    </div>
+    <p class="ctlnote" id="arch-note">The architecture as published: an encoder reads the source sentence, a decoder writes the target and attends back to the encoder.</p>
     <div class="archkey">
       <span><i class="on"></i> opened on this page</span>
       <span><i class="off"></i> in the paper, out of scope here</span>
@@ -432,6 +480,30 @@
   <p>Both stacks are six identical layers deep. An encoder layer is two sub-layers — multi-head self-attention, then a position-wise feed-forward network. A decoder layer is three: masked self-attention, then attention over the encoder's output, then feed-forward. Every one of those sub-layers is wrapped as <code>LayerNorm(x + Sublayer(x))</code>, a residual connection followed by layer normalisation, which is what makes a stack this deep trainable at all.</p>
 
   <p>The steel blocks are real and load-bearing; they are simply not what the paper is named after.</p>
+
+  <h3>And why you stack six of them</h3>
+
+  <p>One layer lets a token read its neighbours. Two layers let it read what its neighbours had already read. Compose the attention matrices across layers &mdash; <code>W<sub>L</sub> &middot; &hellip; &middot; W<sub>1</sub></code>, each row still summing to one &mdash; and you get exactly how much of each <em>original</em> token is present in a vector after <em>L</em> layers.</p>
+
+  <div class="demo" id="demoH">
+    <div class="tokrow" id="h-toks"></div>
+    <p class="ctlnote">Pick a token above, then set the depth. The bars are the composed mixing matrix, so they are the real arithmetic of stacked attention &mdash; residual connections included, feed-forward left out because it never mixes positions.</p>
+    <div class="ctl">
+      <label for="h-l">layers</label>
+      <input type="range" id="h-l" min="1" max="6" step="1" value="1">
+      <output id="h-lv">1</output>
+    </div>
+    <div class="split" style="margin-top:6px">
+      <div>
+        <h4 id="h-cap">Where its content came from</h4>
+        <div class="bars" id="h-bars"></div>
+      </div>
+      <div>
+        <h4>What changes with depth</h4>
+        <p class="hint" id="h-note" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
 
   <h3>Why this is the thing under a language model</h3>
 
@@ -902,6 +974,76 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
   });
   logTo(el('a-log'), HEADS[0].name, HEADS[0].note);
   aRender();
+
+  /* ============ 01b · the architecture toggle ============ */
+  (function(){
+    var svg = document.querySelector('.arch'),
+        mt = el('arch-mt'), lm = el('arch-lm'), note = el('arch-note');
+    function set(isLM){
+      svg.classList.toggle('lm', isLM);
+      mt.className = isLM ? 'ghost' : '';
+      lm.className = isLM ? '' : 'ghost';
+      note.innerHTML = isLM
+        ? 'The decoder column alone, which is what later language models kept: no encoder to read '
+          + 'a source sentence, so no cross-attention either. Masked self-attention and a '
+          + 'feed-forward network, repeated. <em>This is later work, not the paper.</em>'
+        : 'The architecture as published: an encoder reads the source sentence, a decoder writes '
+          + 'the target and attends back to the encoder.';
+    }
+    mt.addEventListener('click', function(){ set(false); });
+    lm.addEventListener('click', function(){ set(true); });
+  })();
+
+  /* ============ 01c · what depth buys ============ */
+  var hTok = 5, hSeq = [0,1,2,3];        // one head per layer, cycling
+  function mixOnce(A){
+    /* attention with the residual: keep yourself, plus what you attended to */
+    var W = attend(A, ORDER, false, false), n = W.length, M = [];
+    for (var i=0;i<n;i++){
+      var row = [];
+      for (var j=0;j<n;j++) row.push(((i===j?1:0) + W[i][j]) / 2);
+      M.push(row);
+    }
+    return M;
+  }
+  function matmul(P, Q){
+    var n = P.length, R = [];
+    for (var i=0;i<n;i++){ var row = [];
+      for (var j=0;j<n;j++){ var s = 0;
+        for (var k=0;k<n;k++) s += P[i][k]*Q[k][j];
+        row.push(s); }
+      R.push(row); }
+    return R;
+  }
+  function hRender(){
+    var L = +el('h-l').value;
+    el('h-lv').textContent = L;
+    var M = mixOnce(HEADS[hSeq[0]].A);
+    for (var l=1;l<L;l++) M = matmul(mixOnce(HEADS[hSeq[l % hSeq.length]].A), M);
+    var row = M[hTok], labs = ORDER.map(function(oi){ return TOKENS[oi].w; });
+    bars(el('h-bars'), labs, row);
+    el('h-cap').textContent = 'Where "' + TOKENS[ORDER[hTok]].w + '" got its content, after ' +
+      L + (L === 1 ? ' layer' : ' layers');
+    var own = row[hTok], reach = row.filter(function(v){ return v > 0.05; }).length;
+    el('h-note').textContent =
+      'Of itself: ' + (100*own).toFixed(1) + '%. Tokens contributing more than 5%: ' + reach +
+      ' of ' + row.length + '. ' +
+      (L === 1
+        ? 'Even at one layer every token already contributes something — attention has no distance limit, which is the O(1) path length of the last section.'
+        : 'Depth is not what lets information arrive; it lets it compound. Each layer mixes what the previous one had already mixed, so a token stops being itself-plus-neighbours and becomes a blend of the whole sentence.');
+    el('h-toks').innerHTML = '';
+    ORDER.forEach(function(oi, i){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tok' + (i === hTok ? ' q' : '');
+      b.setAttribute('aria-pressed', String(i === hTok));
+      b.textContent = TOKENS[oi].w;
+      b.addEventListener('click', function(){ hTok = i; hRender(); });
+      el('h-toks').appendChild(b);
+    });
+  }
+  el('h-l').addEventListener('input', hRender);
+  hRender();
 
   /* ============ 02 · the scaling ============ */
   var NKEYS = 6, NSAMP = 400;

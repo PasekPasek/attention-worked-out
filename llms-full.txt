@@ -21,6 +21,20 @@ stack of identical layers takes that sequence of vectors and returns a sequence 
 over and over, and the only step in a layer that moves information between positions is attention —
 everything else works on each position on its own.
 
+The thing that makes it click is that the shape never changes. Text becomes tokens; each token
+becomes a vector, so a six-token sentence is a 6 x 512 matrix in the paper's base model. Every layer
+takes 6 x 512 and returns 6 x 512, twelve sub-layers in a row, and only attention lets one position
+see another — the feed-forward network and the normalisation work on each row separately and would
+give the same answer if you shuffled the sentence. At the end a linear layer and a softmax turn each
+row into a distribution over the roughly 37000-token vocabulary, and when generating only the last
+row is read.
+
+Why six layers rather than one: compose the attention matrices across layers, W_L · … · W_1, and each
+row still sums to one and tells you how much of each original token is present in a vector after L
+layers. Depth is not what lets information arrive — with full attention every token already
+contributes at layer one, which is the O(1) path length — it is what lets information compound, each
+layer mixing what the previous one had already mixed.
+
 Attention is therefore one sub-layer inside a larger machine, and reading about it without that frame
 is most of what makes it hard.
 
