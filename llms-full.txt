@@ -1,0 +1,106 @@
+# Attention, Worked Out
+
+Source: https://pasekpasek.github.io/attention-worked-out/
+Author: Paweł Pasek
+Explains: Attention Is All You Need — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
+Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin, arXiv:1706.03762 [cs.CL], 2017
+
+Attention is a weighted average where the weights are computed from the data itself. Everything else
+in the paper — the scaling, the heads, the mask, the sinusoids — is a consequence of that one
+sentence.
+
+## 1. One head
+
+Every token produces three vectors, all three from the same input through three learned projections:
+a query (what am I looking for), a key (what do I offer) and a value (what do I pass on if chosen).
+Token i scores every token j by q_i · k_j, softmaxes those scores into weights that sum to one, and
+takes that weighted average of the values.
+
+    Attention(Q, K, V) = softmax( Q Kᵀ / √d_k ) V
+
+Because the score is q_i · k_j with q = xW^Q and k = xW^K, it is a bilinear form:
+x_i (W^Q W^Kᵀ) x_jᵀ. A head is therefore characterised by one matrix saying which kinds of token
+attend to which. Different heads are different such matrices.
+
+Each row of the attention matrix sums to exactly one. That is what makes the operation an average
+rather than a sum, and it is guaranteed by the softmax rather than enforced afterwards.
+
+## 2. Why divide by √d_k
+
+The paper's footnote: if the components of q and k are independent random variables with mean 0 and
+variance 1, then their dot product q · k = Σ q_i k_i has mean 0 and variance d_k.
+
+Scores therefore spread out as the head gets wider, and the softmax of a wide spread is a spike. A
+spike has almost no gradient anywhere, so the layer stops learning. Dividing by √d_k returns the
+variance to 1 at any width. At the paper's actual head width of 64, the unscaled softmax already puts
+essentially all of its mass on a single key.
+
+## 3. Multi-head
+
+A single head averages everything into one distribution, and an average is where distinct relations
+get blurred together. The fix is h attentions in parallel over narrower projections:
+
+    MultiHead(Q, K, V) = Concat(head_1, …, head_h) W^O
+           where head_i = Attention(Q W_i^Q, K W_i^K, V W_i^V)
+
+The budget is the point. The paper uses h = 8 and d_k = d_v = d_model/h = 64, so eight heads of width
+64 cost about what one head of width 512 would. You are not buying more computation; you are spending
+the same computation on more than one question at a time.
+
+## 4. The mask
+
+Attention as defined lets every token see every other token, which is right when encoding a sentence
+you already have. Generating one is different: while predicting position i the model must not have
+seen i+1.
+
+The fix is arithmetic, not architecture. Before the softmax, set every illegal score to −∞. Softmax
+sends those to exactly zero, so the row renormalises over the positions that remain. Masking after
+the softmax instead would leave rows summing to less than one, which is a quietly different model.
+
+## 5. Attention cannot see order
+
+Attention takes a set of vectors and returns a set: permute the inputs and every output permutes with
+them, unchanged. There is no recurrence walking left to right and no convolution with a window, so
+nothing in the mechanism knows which token came first. Shuffle the tokens with positional encoding
+off and the output computed for a given token is bit-for-bit what it was, because its neighbours are
+the same set.
+
+The paper adds a fixed pattern to the embeddings rather than learning one:
+
+    PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
+    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+
+Wavelengths run from 2π up to 10000·2π, so low dimensions flip quickly and high ones barely move
+across a whole sentence — a positional signal at every scale at once. The stated reason for choosing
+sinusoids is relative position: for any fixed offset k, PE(pos+k) is a linear function of PE(pos),
+which makes "three tokens back" something the model can learn to look for. The encoding attaches to
+the slot, never to the word.
+
+## 6. What this buys
+
+    Layer type                  Complexity per layer   Sequential ops   Max path length
+    Self-attention              O(n² · d)              O(1)             O(1)
+    Recurrent                   O(n · d²)              O(n)             O(n)
+    Convolutional               O(k · n · d²)          O(1)             O(log_k n)
+    Self-attention (restricted) O(r · n · d)           O(1)             O(n/r)
+
+The argument for replacing recurrence is not that attention is cheaper. Self-attention is the cheaper
+layer only while n < d, which the paper notes is the common case for sentence-length sequences in
+translation. The argument is that attention is shallow: two tokens at opposite ends of a sequence are
+one operation apart rather than n apart, and gradients that travel a short path survive better than
+gradients that travel a long one.
+
+## What is real on this page, and what is not
+
+Every number is computed in the browser from the formulas above: real softmax, real dot products,
+real Gaussian sampling, real sinusoids, real complexity arithmetic. The projection matrices are toy
+values, because the page ships no trained weights; they are chosen so the arithmetic stays inspectable
+at d_model = 4 rather than 512.
+
+## Out of scope
+
+The mechanism, not the model. A full encoder–decoder stacks N = 6 of these layers on each side, and
+every layer wraps its attention and its position-wise feed-forward network in a residual connection
+and layer normalisation — LayerNorm(x + Sublayer(x)) — which is what makes a stack that deep
+trainable. The decoder adds a second attention per layer, over the encoder's output. The training
+recipe — warmup schedule, label smoothing, beam search — and the BLEU results are in the paper.

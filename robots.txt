@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pasekpasek.github.io/attention-worked-out/sitemap.xml

@@ -1,0 +1,36 @@
+# Attention, Worked Out
+
+> An interactive, single-page explainer for the mechanism in "Attention Is All You Need"
+> (Vaswani et al., arXiv:1706.03762): scaled dot-product attention, multi-head attention, causal
+> masking and positional encoding. Six sandboxes, every number computed live in the browser from the
+> paper's own formulas. Author: Paweł Pasek.
+
+Key points made on this page:
+
+- **Attention** — a weighted average whose weights come from the data: `Attention(Q,K,V) = softmax(QKᵀ/√dₖ)V`. Query, key and value are three projections of the same input.
+- **A head is a bilinear form** — since `qᵢ·kⱼ = xᵢ(W^Q W^Kᵀ)xⱼᵀ`, one head is characterised by a single matrix over token kinds.
+- **The √dₖ scaling** — for `q`,`k` with independent unit-variance components, `q·k` has mean 0 and variance `dₖ`. Unscaled, softmax saturates as heads get wider and gradients vanish. Dividing by `√dₖ` returns the variance to 1 at any width.
+- **Multi-head** — `h` parallel attentions over projections of width `dₖ = d_model/h`, concatenated and projected by `W^O`. The paper uses `h = 8`, `d_model = 512`, `dₖ = dᵥ = 64`, so the cost is about that of one full-width head.
+- **Causal masking** — illegal scores are set to −∞ before the softmax, so they become exactly zero and each row still sums to one.
+- **Permutation equivariance** — attention maps a set to a set. With no recurrence and no convolution, nothing in the mechanism encodes order, which is why positional encoding exists.
+- **Sinusoidal positional encoding** — `PE(pos,2i) = sin(pos/10000^(2i/d_model))`, `PE(pos,2i+1) = cos(...)`. Wavelengths form a geometric progression from 2π to 10000·2π; for any fixed offset `k`, `PE(pos+k)` is a linear function of `PE(pos)`.
+- **Why it replaces recurrence** — self-attention is `O(n²·d)` per layer with `O(1)` sequential operations and `O(1)` maximum path length, against recurrence's `O(n·d²)`, `O(n)` and `O(n)`.
+
+## Page
+
+- [Attention, Worked Out](https://pasekpasek.github.io/attention-worked-out/): the full explainer.
+- [Extended plain-text version](https://pasekpasek.github.io/attention-worked-out/llms-full.txt): the same content without the sandboxes.
+
+## Source material
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762): the paper this page explains. Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, Polosukhin.
+
+## Caveat
+
+The projection matrices on the page are toy values, not trained weights; the arithmetic performed on
+them is the paper's. The page covers the mechanism only — the full stack, residuals, layer norm,
+training recipe and results are out of scope.
+
+## Optional
+
+- [Source repository](https://github.com/PasekPasek/attention-worked-out): one HTML file, no build step, MIT.
