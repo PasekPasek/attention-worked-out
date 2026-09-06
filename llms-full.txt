@@ -11,8 +11,26 @@ sentence.
 
 ## 0. Where all this sits
 
-Attention is one sub-layer inside a larger model, and reading about it without that frame is most of
-what makes it hard.
+The paper is from 2017 and its job was translation: read a sentence in German, write one in English.
+What made it notable was a removal. Every competitive model at the time read a sentence one token
+after another, carrying a running summary forward — a recurrent network. This one does not. It takes
+the whole sequence at once and lets every position look directly at every other.
+
+A transformer is what you get from that. Text is cut into tokens and each token becomes a vector. A
+stack of identical layers takes that sequence of vectors and returns a sequence of the same shape,
+over and over, and the only step in a layer that moves information between positions is attention —
+everything else works on each position on its own.
+
+Attention is therefore one sub-layer inside a larger machine, and reading about it without that frame
+is most of what makes it hard.
+
+Why this is the thing under a language model: the architecture has two columns because translation
+has two sequences, one given and one being produced. A language model has only one. What came after
+this paper — later work, not the paper itself — largely kept the decoder column and dropped the
+encoder: no cross-attention, just masked self-attention and a feed-forward network, repeated, in a
+decoder-only stack. That is why the mask carries more weight than its size suggests: in a model that
+generates text it is the entire mechanism by which a token may consider what came before it and is
+forbidden from seeing what comes after.
 
 Both stacks are six identical layers deep. An encoder layer has two sub-layers: multi-head
 self-attention, then a position-wise fully connected feed-forward network. A decoder layer has three:

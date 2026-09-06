@@ -241,8 +241,16 @@
   .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
   .tokrow{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
   .tok{font-family:"IBM Plex Mono",monospace;font-size:12px;padding:4px 9px;
-    border:1px solid var(--etch);border-radius:var(--r);background:var(--riser);color:var(--ink)}
-  .tok.q{border-color:var(--live);color:var(--live)}
+    border:1px solid transparent;border-radius:var(--r);
+    background:var(--well);color:var(--ink-dim)}
+  .tok.q{color:var(--live)}
+  /* the selectable variant is a real button, so it looks and behaves like one */
+  button.tok{border-color:var(--etch);background:var(--riser);color:var(--ink);
+    cursor:pointer;font-weight:400;letter-spacing:0;box-shadow:none;
+    transition:border-color .15s ease,color .15s ease,background .15s ease}
+  button.tok:hover:not(.q){border-color:var(--etch-lit);color:var(--live)}
+  button.tok.q{border-color:var(--live);color:var(--live);background:#241F17}
+  button.tok:focus-visible{outline:2px solid var(--live);outline-offset:2px}
 
   .matwrap{overflow-x:auto}
   table.mat{border-collapse:collapse;font-family:"IBM Plex Mono",monospace;font-size:11.5px;
@@ -257,6 +265,7 @@
   table.mat td .c.masked{background:var(--well)!important;color:var(--idle-line)}
   table.mat tr{cursor:pointer}
   table.mat tr:hover th.rh{color:var(--live)}
+  table.mat tr[role=button]:hover td .c{outline-color:var(--etch-lit)}
 
   .bars{margin:14px 0 0}
   .bar{display:flex;align-items:center;gap:10px;margin-bottom:5px;
@@ -326,7 +335,7 @@
 <header>
   <p class="kicker">A walkthrough of arXiv:1706.03762 (Vaswani et al., 2017)</p>
   <h1>Attention, worked out</h1>
-  <p class="lead">Attention is a weighted average where the weights are computed from the data itself. Everything else in the paper — the scaling, the heads, the mask, the sinusoids — is a consequence of that one sentence, and this page lets you operate each piece.</p>
+  <p class="lead">This is the paper that language models are built on. Its one idea is that attention is a weighted average where the weights are computed from the data itself — and the scaling, the heads, the mask and the sinusoids are all consequences of that sentence. This page lets you operate each piece.</p>
   <p class="muted">An architecture map and six sandboxes. Every number on this page is computed in your browser from the paper's own formulas: real softmax, real dot products, real sinusoids, real sampling.</p>
   <div class="bench">
   <ul class="toc">
@@ -349,7 +358,11 @@
       <p class="muted" style="margin:6px 0 0">The machine first, then the box we open.</p></div>
   </div>
 
-  <p>Attention is one sub-layer inside a larger model, and reading about it without that frame is most of what makes it hard. So here is the whole architecture from the paper's Figure 1, with the parts this page takes apart marked. <strong>Click any amber block to jump to the section that opens it.</strong></p>
+  <p>The paper is from 2017 and its job was translation: read a sentence in German, write one in English. What made it notable was a <em>removal</em>. Every competitive model at the time read a sentence roughly the way you do — one token after another, carrying a running summary forward — a recurrent network. This one does not. It takes the whole sequence at once and lets every position look directly at every other.</p>
+
+  <p>A <strong>transformer</strong> is what you get from that. Text is cut into tokens and each token becomes a vector. A stack of identical layers then takes that sequence of vectors and returns a sequence of vectors of the same shape, over and over, and the only step in a layer that moves information <em>between</em> positions is attention — everything else works on each position on its own. Words go in knowing nothing about their neighbours and come out having read them.</p>
+
+  <p>Attention is therefore one sub-layer inside a larger machine, and reading about it without that frame is most of what makes it hard. Here is the whole architecture from the paper's Figure 1, with the parts this page takes apart marked. <strong>Click any amber block to jump to the section that opens it.</strong></p>
 
   <div class="demo">
     <div class="archwrap">
@@ -408,7 +421,15 @@
 
   <p>Both stacks are six identical layers deep. An encoder layer is two sub-layers — multi-head self-attention, then a position-wise feed-forward network. A decoder layer is three: masked self-attention, then attention over the encoder's output, then feed-forward. Every one of those sub-layers is wrapped as <code>LayerNorm(x + Sublayer(x))</code>, a residual connection followed by layer normalisation, which is what makes a stack this deep trainable at all.</p>
 
-  <p>The steel blocks are real and load-bearing; they are simply not what the paper is named after. What follows opens the amber ones, starting with a single attention head.</p>
+  <p>The steel blocks are real and load-bearing; they are simply not what the paper is named after.</p>
+
+  <h3>Why this is the thing under a language model</h3>
+
+  <p>The diagram has two columns because translation has two sequences: one you are given and one you are producing. A language model has only one. So what came after this paper — and this is later work, not the paper itself — largely kept the right-hand column and dropped the left: no encoder, no cross-attention, just masked self-attention and a feed-forward network, repeated. A <em>decoder-only</em> stack.</p>
+
+  <p>That is why the mask carries more weight than its size suggests. In a model that generates text, masked self-attention is the entire mechanism by which a token is allowed to consider what came before it and forbidden from seeing what comes after — which is what makes predicting the next word a prediction rather than a lookup. Every prompt you have ever sent to a model went through the weighted average this page takes apart, once per head per layer, all the way up a stack far taller than six, at a <code>d<sub>model</sub></code> well past 512 and with heads counted in dozens rather than eight.</p>
+
+  <p>What follows opens the amber blocks, starting with a single attention head.</p>
 </section>
 
 <section id="head">
@@ -422,6 +443,8 @@
   <p>"From the same input" is what makes it <em>self</em>-attention, and the paper is careful that this is not the only arrangement. Its decoder also carries an encoder&ndash;decoder layer where the queries come from the previous decoder layer while the keys and values come from the encoder's output &mdash; the same arithmetic below, with the three projections reading two different places.</p>
 
   <pre>Attention(Q, K, V) = softmax( Q K<sup>T</sup> / &radic;d<sub>k</sub> ) V</pre>
+
+  <p class="hint" style="margin:0 0 4px">Pick the querying token above, or click its row in the grid &mdash; the two do the same thing.</p>
 
   <p>Because the score is <code>q<sub>i</sub> &middot; k<sub>j</sub></code> with <code>q = xW<sup>Q</sup></code> and <code>k = xW<sup>K</sup></code>, it is a bilinear form: <code>x<sub>i</sub> (W<sup>Q</sup>W<sup>K&#8288;T</sup>) x<sub>j</sub><sup>T</sup></code>. So a head is characterised by one matrix saying which kinds of token attend to which. Below, that matrix is yours to pick. Click a row of the grid to see what that token attends to.</p>
 
@@ -800,9 +823,12 @@ PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</pre>
       + ' — softmax guarantees it, which is what makes this an average rather than a sum.';
     el('a-toks').innerHTML = '';
     ORDER.forEach(function(oi, i){
-      var s = document.createElement('span');
+      var s = document.createElement('button');
+      s.type = 'button';
       s.className = 'tok' + (i === aRow ? ' q' : '');
+      s.setAttribute('aria-pressed', String(i === aRow));
       s.textContent = TOKENS[oi].w + '  ' + FEATS[TOKENS[oi].f];
+      s.addEventListener('click', function(){ aRow = i; aRender(); });
       el('a-toks').appendChild(s);
     });
   }
